@@ -5,7 +5,7 @@ version:
 tags: online, coop
 date: 2026-08-05
 ---
-
+# PALWORLD - 1623730
 # BEFORE ANYTHING ELSE
 1. Download EPIC Games Store at https://store.epicgames.com/
 2. Register an account at https://www.epicgames.com/id/login?lang=en-US, login using Google also accepted.
