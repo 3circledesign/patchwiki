@@ -1056,13 +1056,11 @@
 <script>
 // ─── DATA STORE ────────────────────────────────────────────────
 // In production this would be GitHub Issues API or a JSON file in the repo.
-// For demo, we use localStorage so submissions persist in the browser.
+// Production: loads from tutorials.json built by GitHub Action. Dev: falls back to SAMPLE_TUTORIALS.
 
 // ─── LOAD TUTORIALS ────────────────────────────────────────────
 // Production: fetches /tutorials.json built by the GitHub Action.
 // Local dev fallback: uses SAMPLE_TUTORIALS so you can open index.html directly.
-
-const STORAGE_KEY = 'patchwiki_contributed'; // only for locally-submitted draft previews
 
 const SAMPLE_TUTORIALS = [
   {
@@ -1275,30 +1273,18 @@ For most games, use **Goldberg with LAN mode** + Hamachi or ZeroTier instead of 
   }
 ];
 
-// Merge contributed (localStorage) drafts on top of fetched list
-function getContributed() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; }
-}
-function saveContributed(list) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-}
-
 let tutorials = [];
 let currentFilter = 'all';
 
 async function loadTutorials() {
   try {
-    // Try fetching the built tutorials.json (works on GitHub Pages)
+    // Fetch built tutorials.json (GitHub Pages)
     const res = await fetch('tutorials.json');
     if (!res.ok) throw new Error('no json');
-    const remote = await res.json();
-    // Prepend any locally-submitted previews (so contributor sees their draft immediately)
-    const local = getContributed();
-    tutorials = [...local, ...remote];
+    tutorials = await res.json();
   } catch {
-    // Local dev fallback — no server, use sample data + any local drafts
-    const local = getContributed();
-    tutorials = [...local, ...SAMPLE_TUTORIALS];
+    // Local dev fallback — opening index.html directly without a server
+    tutorials = SAMPLE_TUTORIALS;
   }
   renderGrid(tutorials);
   updateStats();
@@ -1722,13 +1708,7 @@ function submitTutorial() {
     content
   };
 
-  // Save to local contributed list (shows up immediately for this user)
-  const contributed = getContributed();
-  contributed.unshift(newT);
-  saveContributed(contributed);
-  tutorials.unshift(newT);
-
-  showToast('Draft saved! See PR instructions below.', '🚀');
+  showToast('Guide ready! Follow the steps below to submit.', '🚀');
 
   // Show PR instructions panel
   showPRInstructions(newT, document.getElementById('md-editor').value.trim());
@@ -1819,7 +1799,7 @@ Your tutorial is immediately live for the community to read.
 
 ## Tech Stack
 
-This wiki is a **fully static GitHub Pages site** — no server, no database. All tutorials are stored locally in your browser via \`localStorage\`. In a production deployment, submissions would be sent as GitHub Issues or pull requests, with a JSON file in the repo as the data source.
+This wiki is a **fully static GitHub Pages site** — no server, no database. Tutorials are plain `.md` files in the repo. Contributors open a Pull Request, and the GitHub Action rebuilds `tutorials.json` on every merge.
 
 ## Contact
 
