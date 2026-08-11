@@ -152,6 +152,8 @@ function build() {
     const raw  = fs.readFileSync(file, 'utf8');
     const { fm, body } = parseFrontmatter(raw);
     const filename = path.basename(file, '.md');
+    const relPath  = path.relative(TUTORIALS_DIR, file).replace(/\\/g, '/').replace(/\.md$/, '');
+    const slugPath = slugify(relPath.replace(/\//g, '-'));
 
     // Resolve fields: frontmatter wins, then auto-parsed, then filename fallback
     const title   = fm.title   || parseTitle(body)   || filename;
@@ -170,10 +172,19 @@ function build() {
       if (tags.length === 0) tags = ['general'];
     }
 
-    const id = fm.id || slugify(filename);
+    const id = fm.id || slugPath;
 
     tutorials.push({ id, title, game, desc, tags, author, version, date, content: body });
     console.log(`  ✓ ${title} [${tags.join(', ')}]`);
+  }
+
+  // Warn about duplicate IDs
+  const idCount = {};
+  for (const t of tutorials) idCount[t.id] = (idCount[t.id] || 0) + 1;
+  const dupes = Object.entries(idCount).filter(([,n]) => n > 1);
+  if (dupes.length > 0) {
+    console.warn(`\n⚠️  Duplicate IDs found (only last one survives):`);
+    dupes.forEach(([id, n]) => console.warn(`   ${id} (${n} files)`));
   }
 
   // Sort newest first
@@ -181,8 +192,10 @@ function build() {
 
   // Write tutorials.json
   const jsonPath = path.join(DIST_DIR, 'tutorials.json');
-  fs.writeFileSync(jsonPath, JSON.stringify(tutorials, null, 2), 'utf8');
-  console.log(`\nWrote ${tutorials.length} tutorials → dist/tutorials.json`);
+  const jsonStr = JSON.stringify(tutorials, null, 2);
+  fs.writeFileSync(jsonPath, jsonStr, 'utf8');
+  const kb = (Buffer.byteLength(jsonStr) / 1024).toFixed(1);
+  console.log(`\nWrote ${tutorials.length} tutorials → dist/tutorials.json (${kb} KB)`);
 
   // Copy index.html to dist
   fs.copyFileSync(INDEX_SRC, path.join(DIST_DIR, 'index.html'));
